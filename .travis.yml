@@ -5,12 +5,10 @@ services:
 
 jobs:
   include:
-    - stage: development build
+    - stage: development build and test
       script:
         - docker build -t darthdamo/docker-complex-app -f ./client/Dockerfile.dev ./client
-    - stage: "run tests"
-      script:
-        - docker run -e CI=true darthdamo/docker-complex-app npm test
+        - docker run -e CI=true darthdamo/docker-complex-app:latest npm test
     - stage: multi container builds
       script:
         - docker build -t darthdamo/multi-client ./client
