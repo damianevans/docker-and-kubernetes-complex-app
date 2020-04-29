@@ -1,0 +1,34 @@
+language: generic 
+sudo: required
+services:
+  - docker
+
+jobs:
+  include:
+    - stage: development build
+      script:
+        - docker build -t darthdamo/docker-complex-app -f ./client/Dockerfile.dev ./client
+    - stage: "run tests"
+      script:
+        - docker run -e CI=true darthdamo/docker-complex-app npm test
+    - stage: multi container builds
+      script:
+        - docker build -t darthdamo/multi-client ./client
+        - docker build -t darthdamo/multi-nginx ./nginx
+        - docker build -t darthdamo/multi-server ./server
+        - docker build -t darthdamo/multi-worker ./worker
+    - stage: Login to Azure Container Registry
+      script: 
+        - docker login damocontainerregistry01.azurecr.io -u "$AZ_CONTAINER_USERNAME" -p "$AZ_CONTAINER_PWD"
+    - stage: Tag images for Azure Container Registry
+      script:
+        - docker tag darthdamo/multi-client:latest damocontainerregistry01.azurecr.io/darthdamo/multi-client:latest
+        - docker tag darthdamo/multi-nginx:latest damocontainerregistry01.azurecr.io/darthdamo/multi-nginx:latest        
+        - docker tag darthdamo/multi-server:latest damocontainerregistry01.azurecr.io/darthdamo/multi-server:latest
+        - docker tag darthdamo/multi-worker:latest damocontainerregistry01.azurecr.io/darthdamo/multi-worker:latest        
+    - stage: Push Images to ACR
+      script:
+        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-client
+        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-nginx
+        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-server
+        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-worker
