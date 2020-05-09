@@ -38,7 +38,7 @@ services:
       context: ./client
     volumes: 
       - /app/node_modules
-      - ./client:/app
+      - clientmount:/app
   worker: 
     environment:
       - REDIS_HOST=redis
@@ -48,4 +48,4 @@ services:
       context: ./worker
     volumes:
       - /app/node_modules
-      - ./worker:/app
+      - workermount:/app

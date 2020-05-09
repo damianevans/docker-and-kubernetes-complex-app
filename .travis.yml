@@ -3,24 +3,29 @@ sudo: required
 services:
   - docker
 
-jobs:
-  include:
-    - stage: development build and test
-      script:
-        - docker build -t darthdamo/docker-complex-app -f ./client/Dockerfile.dev ./client
-        - docker run -e CI=true darthdamo/docker-complex-app:latest npm test
-    - stage: multi container build, tag and push to ACR
-      script:
-        - docker build -t darthdamo/multi-client ./client
-        - docker build -t darthdamo/multi-nginx ./nginx
-        - docker build -t darthdamo/multi-server ./server
-        - docker build -t darthdamo/multi-worker ./worker
-        - docker login damocontainerregistry01.azurecr.io -u "$AZ_CONTAINER_USERNAME" -p "$AZ_CONTAINER_PWD"
-        - docker tag darthdamo/multi-client:latest damocontainerregistry01.azurecr.io/darthdamo/multi-client:latest
-        - docker tag darthdamo/multi-nginx:latest damocontainerregistry01.azurecr.io/darthdamo/multi-nginx:latest        
-        - docker tag darthdamo/multi-server:latest damocontainerregistry01.azurecr.io/darthdamo/multi-server:latest
-        - docker tag darthdamo/multi-worker:latest damocontainerregistry01.azurecr.io/darthdamo/multi-worker:latest        
-        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-client
-        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-nginx
-        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-server
-        - docker push damocontainerregistry01.azurecr.io/darthdamo/multi-worker
+before_install:
+  - docker build -t darthdamo/react-test -f ./client/Dockerfile.dev ./client
+
+script:
+  - docker run darthdamo/react-test npm test -- --coverage
+
+after_success:
+  - docker build -t darthdamo/multi-client ./client
+  - docker build -t darthdamo/multi-nginx ./nginx
+  - docker build -t darthdamo/multi-server ./server
+  - docker build -t darthdamo/multi-worker ./worker
+  # Log in to the docker CLI
+  - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+  # Take those images and push them to docker hub
+  - docker push darthdamo/multi-client
+  - docker push darthdamo/multi-nginx
+  - docker push darthdamo/multi-server
+  - docker push darthdamo/multi-worker
+
+deploy:
+  provider: azure_web_apps
+  username: "$AZ_SERVICE_PRINCIPAL_ID"       # If AZURE_WA_USERNAME isn't set
+  password: "$AZ_SERVICE_PRINCIPAL_PWD"   # If AZURE_WA_PASSWORD isn't set
+  site: damo-docker-and-kubernetes       # If AZURE_WA_SITE isn't set
+  on:
+    branch: master
